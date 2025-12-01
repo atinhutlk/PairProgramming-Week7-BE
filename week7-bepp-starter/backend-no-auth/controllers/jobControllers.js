@@ -1,89 +1,109 @@
-const Job = require("../models/jobModel");
 const mongoose = require("mongoose");
+const Job = require("../models/jobModel");
 
-//GET / jobs;
+// GET /api/jobs
 const getAllJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({}).sort({ createdAt: -1 });
-    res.status(200).json(jobs);
+    const jobs = await Job.find({});
+    return res.status(200).json(jobs);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve jobs" });
+    return res.status(500).json({ message: "Failed to retrieve jobs" });
   }
 };
 
-// POST /jobs
-const createJob = async (req, res) => {
-  try {
-    const newJob = await Job.create({ ...req.body });
-    res.status(201).json(newJob);
-  } catch (error) {
-    res
-      .status(400)
-      .json({ message: "Failed to create job", error: error.message });
-  }
-};
-
-// GET /jobs/:jobId
+// GET /api/jobs/:jobId
 const getJobById = async (req, res) => {
   const { jobId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(jobId)) {
-    return res.status(404).json({ message: "Invalid job ID" });
+    return res.status(404).json({ message: "Job not found" });
   }
 
   try {
     const job = await Job.findById(jobId);
-    if (job) {
-      res.status(200).json(job);
-    } else {
-      res.status(404).json({ message: "Job not found" });
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
     }
+    return res.status(200).json(job);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve job" });
+    return res.status(500).json({ message: "Failed to retrieve job" });
   }
 };
 
-// PUT /jobs/:jobId
-const updateJob = async (req, res) => {
-  const { jobId } = req.params;
+// POST /api/jobs
+const createJob = async (req, res) => {
+  const { title, type, description, location, salary, company } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(jobId)) {
-    return res.status(400).json({ message: "Invalid job ID" });
+  if (!title || !company || !company.name) {
+    return res
+      .status(400)
+      .json({ message: "Title and company.name are required" });
   }
 
   try {
-    const updatedJob = await Job.findOneAndUpdate(
-      { _id: jobId },
-      { ...req.body },
-      { new: true }
-    );
-    if (updatedJob) {
-      res.status(200).json(updatedJob);
-    } else {
-      res.status(404).json({ message: "Job not found" });
-    }
+    const job = await Job.create({
+      title,
+      type,
+      description,
+      location,
+      salary,
+      company,
+    });
+
+    return res.status(201).json(job);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update job" });
+    return res.status(500).json({ message: "Failed to create job" });
   }
 };
 
-// DELETE /jobs/:jobId
+// PUT /api/jobs/:jobId
+const updateJob = async (req, res) => {
+  const { jobId } = req.params; 
+
+  if (!mongoose.Types.ObjectId.isValid(jobId)) {
+    return res.status(400).json({ message: "Job not found" });
+  }
+
+  if (req.body.title === "") {
+    return res.status(400).json({ message: "Invalid job data" });
+  }
+
+  try {
+    const updatedJob = await Job.findByIdAndUpdate(jobId, req.body, {
+      new: true,          
+      runValidators: true,
+    });
+
+    if (!updatedJob) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    
+    return res.status(200).json(updatedJob);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update job" });
+  }
+};
+
+// DELETE /api/jobs/:jobId
 const deleteJob = async (req, res) => {
   const { jobId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(jobId)) {
-    return res.status(400).json({ message: "Invalid job ID" });
+    return res.status(400).json({ message: "Job not found" });
   }
 
   try {
-    const deletedJob = await Job.findOneAndDelete({ _id: jobId });
-    if (deletedJob) {
-      res.status(204).send(); // 204 No Content
-    } else {
-      res.status(404).json({ message: "Job not found" });
+    const deletedJob = await Job.findByIdAndDelete(jobId);
+
+    if (!deletedJob) {
+      return res.status(404).json({ message: "Job not found" });
     }
+
+    // Test expect 204
+    return res.status(204).end();
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete job" });
+    return res.status(500).json({ message: "Failed to delete job" });
   }
 };
 
