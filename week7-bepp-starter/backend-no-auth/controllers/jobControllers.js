@@ -28,7 +28,7 @@ const getJobById = async (req, res) => {
   const { jobId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(jobId)) {
-    return res.status(400).json({ message: "Invalid job ID" });
+    return res.status(404).json({ message: "Invalid job ID" });
   }
 
   try {
